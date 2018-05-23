@@ -44,7 +44,7 @@ class Game:
 	def reveal(self, startTile):
 		# revealed a mine
 		if startTile in self.mineLocations:
-			self.revealed[tile] = True
+			self.revealed[startTile] = True
 			self.lost()
 			return [startTile]
 
@@ -80,10 +80,10 @@ class Minesweeper:
 	
 	def left_click(self, event):
 		tile = int(event.widget.cget('text'))
-		self.flags = (self.flags + 1) % 2
+		self.flags[tile] = (self.flags[tile] + 1) % 2
 
 	# update changed tiles
-	def updateTiles(tiles):
+	def updateTiles(self, tiles):
 		pass
 
 	def generate(self, N, M, num_mines):
