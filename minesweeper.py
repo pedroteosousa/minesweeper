@@ -164,6 +164,7 @@ class Minesweeper:
 				self.mine_labels[tile].grid(row = i, column = j)
 				self.mine_labels[tile].bind('<1>', self.right_click)
 				self.mine_labels[tile].bind('<2>', self.left_click)
+				self.mine_labels[tile].bind('<3>', self.left_click)
 
 def main():
 	root = Tk()
