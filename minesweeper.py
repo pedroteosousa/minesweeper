@@ -54,10 +54,17 @@ class Game:
 	def isValid(self, tile):
 		return tile in range(self.N * self.M)
 
-	def lost(self):
+	def lost(self, tile):
 		self.gameState = 2
 		for i in range(self.N * self.M):
 			self.revealed[i] = True
+
+			# setting wrong flags to 3
+			if self.flags[i] == 1 and not self.isMine[i]:
+				self.flags[i] = 3
+
+		# setting clicked bomb flag to 4
+		self.flags[tile] = 4
 			
 	def flag(self, tile):
 		# flag tile if it was not revealed already (if revealed, flag is always 0)
@@ -72,8 +79,8 @@ class Game:
 		# revealed a mine
 		if startTile in self.mineLocations:
 			self.revealed[startTile] = True
-			self.lost()
-			return [startTile]
+			self.lost(startTile)
+			return [i for i in range(self.N * self.M)]
 
 		queue = [startTile]
 		changedTiles = []
@@ -97,7 +104,7 @@ class Minesweeper:
 		self.master = master
 
 		# loading images
-		self.tileImg = ["tile", "flag", "question"]
+		self.tileImg = ["tile", "flag", "question", "flag_wrong", "bomb_clicked"]
 		for i in range(len(self.tileImg)):
 			self.tileImg[i] = PhotoImage(file = "images/%s.gif" % self.tileImg[i])
 		self.bombImg = PhotoImage(file = "images/bomb.gif")
@@ -116,11 +123,6 @@ class Minesweeper:
 		if not self.game.revealed[tile] and self.game.flags[tile] == 0:
 			self.updateTiles(self.game.reveal(tile))
 		
-		# check if game ended and update all tiles
-		if self.game.gameState == 2:
-			self.updateTiles([i for i in range(self.game.N * self.game.M)])
-			
-	
 	def left_click(self, event):
 		tile = int(event.widget.cget('text'))
 		self.game.flag(tile)
@@ -128,43 +130,48 @@ class Minesweeper:
 
 	# find image that should be displayed on each tile
 	def getImage(self, tile):
-		if not self.game.revealed[tile]:
+		# if tile was not revealed, use the tile flag
+		# also, special cases for flags (wrong flag and clicked bomb)
+		if not self.game.revealed[tile] or self.game.flags[tile] > 2:
 			return self.tileImg[self.game.flags[tile]]
-		if self.game.isMine[tile]:
-			return self.bombImg
-		if self.game.values[tile] >= 0 and len(self.numberImg) > self.game.values[tile]:
+		else:
+			# if bomb was flagged, keep the flag
+			if self.game.isMine[tile]:
+				if self.game.flags[tile] == 1:
+					return self.tileImg[self.game.flags[tile]]
+				else:
+					return self.bombImg
 			return self.numberImg[self.game.values[tile]]
-		return self.numberImg[0]
 
 	# update changed tiles
 	def updateTiles(self, tiles):
 		for tile in tiles:
 			img = self.getImage(tile)
-			self.mine_labels[tile].configure(image = img)
-			self.mine_labels[tile].image = img
+			self.mineLabels[tile].configure(image = img)
+			self.mineLabels[tile].image = img
 
-	def generate(self, N, M, num_mines):
+	def generate(self, N, M, numMines):
 		try:
 			self.frame.destroy()
 		except AttributeError:
 			print("could not destroy current frame")
 
-		self.game = Game(N, M, num_mines)
+		self.game = Game(N, M, numMines)
 
 		self.frame = Frame(self.master)
 		self.frame.pack()
 
 		# creating labels
-		self.mine_labels = []
+		self.mineLabels = []
 		for i in range(N):
 			for j in range(M):
 				tile = j+i*M
-				self.mine_labels.append(Label(self.frame, text = '%d' % tile,
+				self.mineLabels.append(Label(self.frame, text = '%d' % tile,
 					image = self.getImage(tile), borderwidth = 1, relief = "solid"))
-				self.mine_labels[tile].grid(row = i, column = j)
-				self.mine_labels[tile].bind('<1>', self.right_click)
-				self.mine_labels[tile].bind('<2>', self.left_click)
-				self.mine_labels[tile].bind('<3>', self.left_click)
+				self.mineLabels[tile].grid(row = i, column = j)
+				self.mineLabels[tile].bind('<1>', self.right_click)
+				self.mineLabels[tile].bind('<2>', self.left_click)
+				self.mineLabels[tile].bind('<3>', self.left_click)
 
 def main():
 	root = Tk()
