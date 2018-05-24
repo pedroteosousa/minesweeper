@@ -12,7 +12,7 @@ class Game:
 		# vector of directions
 		self.directions = [-M - 1, -M, -M + 1, -1, 1, M - 1, M, M + 1]
 
-		# number of adjacent bombs
+		# number of adjacent mines
 		self.values = [0] * (N * M)
 		
 		# storing which tiles have been revealed to the player
@@ -20,9 +20,11 @@ class Game:
 		
 		# store the game state (0 - before start, 1 - running, 2 - ended)
 		self.gameState = 0
+		self.won = False
 		
 		# store marked tiles: 0 - blank, 1 - flag, 2 - question mark
 		self.flags = [0] * (N * M)
+		self.numFlags = 0
 
 	def firstMove(self, tile):
 		# generating mine locations
@@ -32,7 +34,7 @@ class Game:
 		for mine in self.mineLocations:
 			self.isMine[mine] = True
 		
-		# calculating number of bombs adjecent to each tile
+		# calculating number of mines adjecent to each tile
 		for tile in range(self.N * self.M):
 			if not self.isMine[tile]:
 				for d in self.directions:
@@ -53,9 +55,20 @@ class Game:
 	# check if tile is inside the grid
 	def isValid(self, tile):
 		return tile in range(self.N * self.M)
-
-	def lost(self, tile):
+		
+	def flag(self, tile):
+		# flag tile if it was not revealed already (if revealed, flag is always 0)
+		if not self.revealed[tile]:
+			if self.flags[tile] == 1:
+				self.numFlags -= 1
+			self.flags[tile] = (self.flags[tile] + 1) % 3
+			if self.flags[tile] == 1:
+				self.numFlags += 1
+	
+	def ended(self, won, tile):
 		self.gameState = 2
+		self.won = won
+
 		for i in range(self.N * self.M):
 			self.revealed[i] = True
 
@@ -63,25 +76,35 @@ class Game:
 			if self.flags[i] == 1 and not self.isMine[i]:
 				self.flags[i] = 3
 
-		# setting clicked bomb flag to 4
-		self.flags[tile] = 4
-			
-	def flag(self, tile):
-		# flag tile if it was not revealed already (if revealed, flag is always 0)
-		if not self.revealed[tile]:
-			self.flags[tile] = (self.flags[tile] + 1) % 3
+		if won:
+			#setting flags on unflagged mines
+			for mine in self.mineLocations:
+				self.flags[mine] = 1
+		else:
+			# setting clicked bomb flag to 4
+			self.flags[tile] = 4
+	
+	def hasEnded(self):
+		# check if a mine was revealed
+		for mine in self.mineLocations:
+			if self.revealed[mine]:
+				self.ended(False, mine)
+				return True
+
+		# check if any non-mine tile was not revealed
+		for tile in range(self.N * self.M):
+			if not self.revealed[tile] and not self.isMine[tile]:
+				return False
+		
+		# if all non-mine tiles were revealed, game ended
+		self.ended(True, 0)
+		return True
 
 	def reveal(self, startTile):
 		# generate game grid on first move
 		if not self.gameState:
 			self.firstMove(startTile)
 	
-		# revealed a mine
-		if startTile in self.mineLocations:
-			self.revealed[startTile] = True
-			self.lost(startTile)
-			return [i for i in range(self.N * self.M)]
-
 		queue = [startTile]
 		changedTiles = []
 		while len(queue):
@@ -96,8 +119,10 @@ class Game:
 						# only reveal tile if it is not flagged
 						if self.isAdjacent(tile, tile + d) and self.flags[tile + d] == 0:
 							queue.append(tile+d)
-
-		return changedTiles
+		if self.hasEnded():
+			return [i for i in range(self.N * self.M)]	
+		else:
+			return changedTiles
 
 class Minesweeper:
 	def __init__(self, master):
@@ -112,8 +137,12 @@ class Minesweeper:
 		for i in range(9):
 			self.numberImg.append(PhotoImage(file = "images/tile_%d.gif" % i))
 
-		# generating a game for testing
-		self.generate(15, 20, 50)
+		# text to show on ui
+		self.minesMessage = 'Remaining Mines: %d'
+		self.endMessage = ['You Lost!', 'You Won!']
+		
+		# default game size
+		self.generate(10, 10, 10)
 
 	# events that handle clicking on a tile
 	def right_click(self, event):
@@ -150,28 +179,72 @@ class Minesweeper:
 			self.mineLabels[tile].configure(image = img)
 			self.mineLabels[tile].image = img
 
+		# change number of remaining mines
+		remainingMines = self.game.numMines - self.game.numFlags
+		# if game ended, change the message
+		if self.game.gameState == 2:
+			newText = self.endMessage[int(self.game.won)]
+		else:
+			newText = self.minesMessage % remainingMines
+		self.minesLabel.configure(text = newText)
+		self.minesLabel.text = newText
+		
 	def generate(self, N, M, numMines):
+		# clear frames so a new game can be created
 		try:
-			self.frame.destroy()
+			self.gameFrame.destroy()
+			self.infoFrame.destroy()
 		except AttributeError:
-			print("could not destroy current frame")
+			print("could not destroy current frames")
 
 		self.game = Game(N, M, numMines)
-
-		self.frame = Frame(self.master)
-		self.frame.pack()
+		
+		# frame that holds the game
+		self.gameFrame = Frame(self.master)
+		self.gameFrame.pack()
 
 		# creating labels
 		self.mineLabels = []
 		for i in range(N):
 			for j in range(M):
 				tile = j+i*M
-				self.mineLabels.append(Label(self.frame, text = '%d' % tile,
+				self.mineLabels.append(Label(self.gameFrame, text = '%d' % tile,
 					image = self.getImage(tile), borderwidth = 1, relief = "solid"))
-				self.mineLabels[tile].grid(row = i, column = j)
+				self.mineLabels[tile].grid(row = i+2, column = j)
 				self.mineLabels[tile].bind('<1>', self.right_click)
 				self.mineLabels[tile].bind('<2>', self.left_click)
 				self.mineLabels[tile].bind('<3>', self.left_click)
+	
+		# creating frame to store info other than the game grid
+		self.infoFrame = Frame(self.master)
+		self.infoFrame.pack()
+	
+		# remaining mines label
+		self.minesLabel = Label(self.infoFrame, text = self.minesMessage % numMines)
+		self.minesLabel.pack()
+
+		# options to create a new game
+		self.sizeLabel = Label(self.infoFrame, text = 'Size: ')
+		self.sizeLabel.pack(side = LEFT)
+		
+		self.nField = Entry(self.infoFrame, width = 3)
+		self.nField.insert(0, str(N))
+		self.nField.pack(side = LEFT)
+		
+		self.mField = Entry(self.infoFrame, width = 3)
+		self.mField.insert(0, str(M))
+		self.mField.pack(side = LEFT)
+		
+		self.numMinesLabel = Label(self.infoFrame, text = 'Number of mines: ')
+		self.numMinesLabel.pack(side = LEFT)
+		
+		self.minesField = Entry(self.infoFrame, width = 3)
+		self.minesField.insert(0, str(numMines))
+		self.minesField.pack(side = LEFT)
+		
+		newGameFunction = lambda: self.generate(int(self.nField.get()), int(self.mField.get()), int(self.minesField.get()))
+		self.newGameButton = Button(self.infoFrame, text = 'New Game', command = newGameFunction)
+		self.newGameButton.pack(side = LEFT)
 
 def main():
 	root = Tk()
