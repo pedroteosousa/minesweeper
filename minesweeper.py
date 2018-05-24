@@ -11,6 +11,8 @@ class Game:
 
 		# vector of directions
 		self.directions = [-M - 1, -M, -M + 1, -1, 1, M - 1, M, M + 1]
+		# getting unique values
+		self.directions = list(set(self.directions))
 
 		# number of adjacent mines
 		self.values = [0] * (N * M)
