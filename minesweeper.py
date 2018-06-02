@@ -196,6 +196,7 @@ class Minesweeper:
 		try:
 			self.gameFrame.destroy()
 			self.infoFrame.destroy()
+			self.popup.destroy()
 		except AttributeError:
 			print("could not destroy current frames")
 
@@ -225,34 +226,43 @@ class Minesweeper:
 		self.minesLabel = Label(self.infoFrame, text = self.minesMessage % numMines)
 		self.minesLabel.pack()
 
+	def newGamePopup(self):
+		self.popup = Toplevel()
+		
 		# options to create a new game
-		self.sizeLabel = Label(self.infoFrame, text = 'Size: ')
+		self.sizeLabel = Label(self.popup, text = 'Size: ')
 		self.sizeLabel.pack(side = LEFT)
 		
-		self.nField = Entry(self.infoFrame, width = 3)
-		self.nField.insert(0, str(N))
+		self.nField = Entry(self.popup, width = 3)
+		self.nField.insert(0, str(self.game.N))
 		self.nField.pack(side = LEFT)
 		
-		self.mField = Entry(self.infoFrame, width = 3)
-		self.mField.insert(0, str(M))
+		self.mField = Entry(self.popup, width = 3)
+		self.mField.insert(0, str(self.game.M))
 		self.mField.pack(side = LEFT)
 		
-		self.numMinesLabel = Label(self.infoFrame, text = 'Number of mines: ')
+		self.numMinesLabel = Label(self.popup, text = 'Number of mines: ')
 		self.numMinesLabel.pack(side = LEFT)
 		
-		self.minesField = Entry(self.infoFrame, width = 3)
-		self.minesField.insert(0, str(numMines))
+		self.minesField = Entry(self.popup, width = 3)
+		self.minesField.insert(0, str(self.game.numMines))
 		self.minesField.pack(side = LEFT)
 		
 		newGameFunction = lambda: self.generate(int(self.nField.get()), int(self.mField.get()), int(self.minesField.get()))
-		self.newGameButton = Button(self.infoFrame, text = 'New Game', command = newGameFunction)
-		self.newGameButton.pack(side = LEFT)
+		self.newGameButton = Button(self.popup, text = 'Create Game', command = newGameFunction)
+		self.newGameButton.pack()
 
 def main():
 	root = Tk()
 	root.title("Minesweeper")
 	minesweeper = Minesweeper(root)
 	root.resizable(False, False)
+
+	# menu
+	menubar = Menu(root)
+	menubar.add_command(label = 'New Game', command = minesweeper.newGamePopup)
+	root.config(menu = menubar)
+	
 	root.mainloop()
 
 if __name__ == "__main__":
