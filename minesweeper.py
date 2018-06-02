@@ -1,5 +1,6 @@
 from Tkinter import *
 from game import *
+import threading, time
 
 class Minesweeper:
 	def __init__(self, master):
@@ -100,6 +101,26 @@ class Minesweeper:
 		# remaining mines label
 		self.minesLabel = Label(self.infoFrame, text = self.minesMessage % numMines)
 		self.minesLabel.pack()
+		
+		# elapsed time label
+		self.timeLabel = Label(self.infoFrame, text = '0 second(s)')
+		self.timeLabel.pack()
+
+		self.updateElapsedTime()
+
+	def updateElapsedTime(self):
+		if self.game.gameState == 0:
+			self.startTime = time.time()
+			self.master.after(10, self.updateElapsedTime)
+			return
+		
+		if self.game.gameState == 2:
+			return
+
+		newText = str(int(time.time() - self.startTime)) + ' second(s)'
+		self.timeLabel.text = newText 
+		self.timeLabel.configure(text = newText)
+		self.master.after(500, self.updateElapsedTime)
 
 	def newGamePopup(self):
 		self.popup = Toplevel()
