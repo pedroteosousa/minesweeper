@@ -1,2 +1,4 @@
-# minesweeper
-A minesweeper solver in python
+# Minesweeper
+
+A minesweeper implementation using **tkinter**
+run using `python3 minesweeper.py`
