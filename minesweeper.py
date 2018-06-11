@@ -1,4 +1,4 @@
-from Tkinter import *
+from tkinter import *
 from game import *
 import threading, time
 
@@ -156,7 +156,9 @@ def main():
 
 	# menu
 	menubar = Menu(root)
-	menubar.add_command(label = 'New Game', command = minesweeper.newGamePopup)
+	optionsmenu = Menu(menubar, tearoff = 0)
+	menubar.add_cascade(label = "Options", menu = optionsmenu)
+	optionsmenu.add_command(label = 'New Game', command = minesweeper.newGamePopup)
 	root.config(menu = menubar)
 	
 	root.mainloop()
